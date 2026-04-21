@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Study Hours Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0f14;
+    --surface: #16181f;
+    --surface2: #1e2029;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --text: #f0f0f0;
+    --muted: #7a7f94;
+    --accent: #6c8cff;
+    --accent2: #a78bfa;
+    --green: #34d399;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* Header */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 1.1rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .header h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .header-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .header-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .today-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  /* Layout */
+  .main { max-width: 860px; margin: 0 auto; padding: 1.5rem 1.5rem 4rem; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; width: fit-content; }
+  .tab-btn {
+    padding: 7px 18px;
+    border: none; background: transparent;
+    color: var(--muted); font-family: 'Sora', sans-serif;
+    font-size: 13px; font-weight: 500;
+    border-radius: 9px; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tab-btn:hover { color: var(--text); background: var(--surface2); }
+  .tab-btn.active { background: var(--accent); color: #fff; }
+
+  /* Metrics */
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
+  .metric {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+  }
+  .metric-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
+  .metric-value { font-size: 26px; font-weight: 600; font-family: 'JetBrains Mono', monospace; color: var(--text); }
+  .metric-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.4rem;
+    margin-bottom: 12px;
+  }
+  .card-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem; }
+
+  /* Form */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-label { font-size: 11px; color: var(--muted); font-weight: 500; }
+  .inp {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    font-size: 14px;
+    padding: 9px 12px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .inp:focus { border-color: var(--accent); }
+  .inp::placeholder { color: var(--muted); }
+  input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cursor: pointer; }
+
+  .btn-row { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
+  .btn {
+    padding: 9px 20px;
+    border-radius: var(--radius-sm);
+    font-family: 'Sora', sans-serif;
+    font-size: 13px; font-weight: 500;
+    cursor: pointer; border: none;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn-ghost { background: var(--surface2); color: var(--muted); border: 1px solid var(--border2); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--border2); }
+  .err { font-size: 12px; color: var(--red); margin-top: 8px; display: none; }
+
+  /* Filter row */
+  .filter-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .filter-row select { 
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: var(--radius-sm); color: var(--muted);
+    font-family: 'Sora', sans-serif; font-size: 12px;
+    padding: 6px 10px; outline: none; cursor: pointer;
+  }
+  .filter-row select:focus { border-color: var(--accent); }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+  td { padding: 10px 10px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+
+  /* Badges */
+  .badge { font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 20px; letter-spacing: 0.04em; }
+  .badge-high { background: rgba(52,211,153,0.12); color: var(--green); border: 1px solid rgba(52,211,153,0.25); }
+  .badge-mid { background: rgba(251,191,36,0.12); color: var(--amber); border: 1px solid rgba(251,191,36,0.25); }
+  .badge-low { background: rgba(248,113,113,0.12); color: var(--red); border: 1px solid rgba(248,113,113,0.25); }
+
+  .del-btn { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 14px; padding: 2px 6px; border-radius: 4px; transition: color 0.15s; }
+  .del-btn:hover { color: var(--red); }
+
+  .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 2.5rem 0; }
+
+  /* Charts */
+  .chart-container { position: relative; width: 100%; }
+
+  /* Summary table highlight */
+  .rank-1 td:first-child { color: var(--accent); font-weight: 600; }
+
+  /* Responsive */
+  @media (max-width: 540px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .header { padding: 1rem; }
+    .main { padding: 1rem 1rem 3rem; }
+    .metric-value { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-icon">📚</div>
+  <div>
+    <h1>Study Hours Tracker</h1>
+    <div class="header-sub">Track your students' daily progress</div>
+  </div>
+  <div class="header-right">
+    <div class="today-badge" id="today-label"></div>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('log')">📋 Log</button>
+    <button class="tab-btn" onclick="switchTab('summary')">📊 Summary</button>
+    <button class="tab-btn" onclick="switchTab('chart')">📈 Charts</button>
+  </div>
+
+  <!-- LOG TAB -->
+  <div id="tab-log">
+    <div class="metrics" id="top-metrics"></div>
+
+    <div class="card">
+      <div class="card-title">Add study session</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Student name</label>
+          <input class="inp" type="text" id="inp-name" placeholder="e.g. Ayesha" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Subject</label>
+          <input class="inp" type="text" id="inp-subject" placeholder="e.g. Maths" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input class="inp" type="date" id="inp-date" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hours studied</label>
+          <input class="inp" type="number" id="inp-hours" min="0.5" max="24" step="0.5" placeholder="e.g. 2" />
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="addEntry()">+ Add session</button>
+        <button class="btn btn-ghost" onclick="clearForm()">Clear</button>
+      </div>
+      <div class="err" id="err-msg"></div>
+    </div>
+
+    <div class="card">
+      <div class="filter-row">
+        <div class="card-title" style="margin-bottom:0;flex:1">Recent sessions</div>
+        <select id="filter-student" onchange="renderTable()">
+          <option value="">All students</option>
+        </select>
+        <select id="filter-subject" onchange="renderTable()">
+          <option value="">All subjects</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Student</th><th>Subject</th><th>Date</th><th>Hours</th><th>Level</th><th></th></tr>
+          </thead>
+          <tbody id="log-body"></tbody>
+        </table>
+        <div class="empty" id="log-empty" style="display:none">No sessions yet. Add your first one above!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY TAB -->
+  <div id="tab-summary" style="display:none">
+    <div class="card">
+      <div class="card-title">Student leaderboard</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Student</th><th>Total hours</th><th>Sessions</th><th>Avg/session</th><th>Top subject</th></tr></thead>
+          <tbody id="summary-body"></tbody>
+        </table>
+        <div class="empty" id="summary-empty" style="display:none">No data yet.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Subject breakdown</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Subject</th><th>Total hours</th><th>Sessions</th><th>Avg/session</th></tr></thead>
+          <tbody id="subject-body"></tbody>
+        </table>
+        <div class="empty" id="subject-empty" style="display:none">No data yet.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHART TAB -->
+  <div id="tab-chart" style="display:none">
+    <div class="card">
+      <div class="card-title">Daily hours (last 14 days)</div>
+      <div class="chart-container" style="height:240px">
+        <canvas id="daily-chart" role="img" aria-label="Daily study hours bar chart"></canvas>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="card-title">Hours per student</div>
+      <div class="chart-container" id="student-chart-wrap" style="height:200px">
+        <canvas id="student-chart" role="img" aria-label="Total hours per student"></canvas>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="card-title">Hours per subject</div>
+      <div class="chart-container" style="height:200px">
+        <canvas id="subject-chart" role="img" aria-label="Total hours per subject"></canvas>
+      </div>
+    </div>
+    <div class="empty" id="chart-empty" style="display:none; padding: 3rem 0;">Add sessions to see charts.</div>
+  </div>
+
+</main>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────
+const STORE_KEY = 'study_tracker_v1';
+let entries = [];
+
+function load() {
+  try { entries = JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch { entries = []; }
+}
+function save() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(entries));
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+load();
+document.getElementById('inp-date').value = todayStr();
+document.getElementById('today-label').textContent = new Date().toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+renderAll();
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function todayStr() { return new Date().toISOString().slice(0,10); }
+
+function levelBadge(h) {
+  if (h >= 3) return '<span class="badge badge-high">High</span>';
+  if (h >= 1.5) return '<span class="badge badge-mid">Medium</span>';
+  return '<span class="badge badge-low">Low</span>';
+}
+
+function showErr(msg) {
+  const el = document.getElementById('err-msg');
+  el.textContent = msg; el.style.display = msg ? 'block' : 'none';
+}
+
+function clearForm() {
+  document.getElementById('inp-name').value = '';
+  document.getElementById('inp-subject').value = '';
+  document.getElementById('inp-hours').value = '';
+  document.getElementById('inp-date').value = todayStr();
+  showErr('');
+}
+
+// ── Add / Delete ──────────────────────────────────────────────────────────
+function addEntry() {
+  const name = document.getElementById('inp-name').value.trim();
+  const subject = document.getElementById('inp-subject').value.trim();
+  const date = document.getElementById('inp-date').value;
+  const hours = parseFloat(document.getElementById('inp-hours').value);
+  if (!name) return showErr('Please enter a student name.');
+  if (!subject) return showErr('Please enter a subject.');
+  if (!date) return showErr('Please pick a date.');
+  if (!hours || hours <= 0) return showErr('Please enter valid hours.');
+  showErr('');
+  entries.unshift({ id: Date.now(), name, subject, date, hours });
+  save();
+  renderAll();
+  document.getElementById('inp-hours').value = '';
+  document.getElementById('inp-subject').value = '';
+}
+
+function deleteEntry(id) {
+  if (!confirm('Delete this session?')) return;
+  entries = entries.filter(e => e.id !== id);
+  save();
+  renderAll();
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function renderAll() {
+  updateFilters();
+  renderMetrics();
+  renderTable();
+  renderSummary();
+}
+
+function updateFilters() {
+  const curS = document.getElementById('filter-student').value;
+  const curSub = document.getElementById('filter-subject').value;
+  const names = [...new Set(entries.map(e => e.name))].sort();
+  const subjects = [...new Set(entries.map(e => e.subject))].sort();
+  document.getElementById('filter-student').innerHTML =
+    '<option value="">All students</option>' + names.map(n => `<option${n===curS?' selected':''}>${n}</option>`).join('');
+  document.getElementById('filter-subject').innerHTML =
+    '<option value="">All subjects</option>' + subjects.map(s => `<option${s===curSub?' selected':''}>${s}</option>`).join('');
+}
+
+function renderMetrics() {
+  const total = entries.reduce((s,e) => s + e.hours, 0);
+  const students = new Set(entries.map(e => e.name)).size;
+  const today = entries.filter(e => e.date === todayStr()).reduce((s,e) => s + e.hours, 0);
+  document.getElementById('top-metrics').innerHTML = `
+    <div class="metric"><div class="metric-label">Total hours logged</div><div class="metric-value">${total.toFixed(1)}</div><div class="metric-sub">across all sessions</div></div>
+    <div class="metric"><div class="metric-label">Students tracked</div><div class="metric-value">${students}</div><div class="metric-sub">${entries.length} sessions total</div></div>
+    <div class="metric"><div class="metric-label">Hours today</div><div class="metric-value">${today.toFixed(1)}</div><div class="metric-sub">${entries.filter(e=>e.date===todayStr()).length} sessions</div></div>
+  `;
+}
+
+function renderTable() {
+  const fs = document.getElementById('filter-student').value;
+  const fsub = document.getElementById('filter-subject').value;
+  let data = entries;
+  if (fs) data = data.filter(e => e.name === fs);
+  if (fsub) data = data.filter(e => e.subject === fsub);
+  const tbody = document.getElementById('log-body');
+  const empty = document.getElementById('log-empty');
+  if (!data.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = data.map(e => `
+    <tr>
+      <td><b>${e.name}</b></td>
+      <td>${e.subject}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)">${e.date}</td>
+      <td><b style="font-family:'JetBrains Mono',monospace">${e.hours}h</b></td>
+      <td>${levelBadge(e.hours)}</td>
+      <td><button class="del-btn" onclick="deleteEntry(${e.id})">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+function renderSummary() {
+  const sbody = document.getElementById('summary-body');
+  const sempty = document.getElementById('summary-empty');
+  const subBody = document.getElementById('subject-body');
+  const subEmpty = document.getElementById('subject-empty');
+  if (!entries.length) {
+    sbody.innerHTML = ''; sempty.style.display = '';
+    subBody.innerHTML = ''; subEmpty.style.display = '';
+    return;
+  }
+  sempty.style.display = 'none'; subEmpty.style.display = 'none';
+
+  // By student
+  const byStudent = {};
+  entries.forEach(e => {
+    if (!byStudent[e.name]) byStudent[e.name] = { hours: 0, sessions: 0, subjects: {} };
+    byStudent[e.name].hours += e.hours;
+    byStudent[e.name].sessions++;
+    byStudent[e.name].subjects[e.subject] = (byStudent[e.name].subjects[e.subject]||0)+e.hours;
+  });
+  const rows = Object.entries(byStudent).sort((a,b)=>b[1].hours-a[1].hours);
+  sbody.innerHTML = rows.map(([name,d],i) => {
+    const top = Object.entries(d.subjects).sort((a,b)=>b[1]-a[1])[0][0];
+    return `<tr class="${i===0?'rank-1':''}">
+      <td style="font-family:'JetBrains Mono',monospace;color:var(--muted)">${i+1}</td>
+      <td>${name}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-weight:600">${d.hours.toFixed(1)}h</td>
+      <td>${d.sessions}</td>
+      <td style="color:var(--muted)">${(d.hours/d.sessions).toFixed(1)}h</td>
+      <td><span class="badge badge-mid">${top}</span></td>
+    </tr>`;
+  }).join('');
+
+  // By subject
+  const bySub = {};
+  entries.forEach(e => {
+    if (!bySub[e.subject]) bySub[e.subject] = { hours:0, sessions:0 };
+    bySub[e.subject].hours += e.hours;
+    bySub[e.subject].sessions++;
+  });
+  subBody.innerHTML = Object.entries(bySub).sort((a,b)=>b[1].hours-a[1].hours).map(([sub,d]) =>
+    `<tr><td>${sub}</td><td style="font-family:'JetBrains Mono',monospace;font-weight:600">${d.hours.toFixed(1)}h</td><td>${d.sessions}</td><td style="color:var(--muted)">${(d.hours/d.sessions).toFixed(1)}h</td></tr>`
+  ).join('');
+}
+
+// ── Charts ────────────────────────────────────────────────────────────────
+let dChart, sChart, subChart;
+const COLORS = ['#6c8cff','#34d399','#fbbf24','#a78bfa','#f87171','#38bdf8','#fb923c','#e879f9'];
+
+function renderCharts() {
+  const hasData = entries.length > 0;
+  document.getElementById('chart-empty').style.display = hasData ? 'none' : '';
+  ['daily-chart','student-chart','subject-chart'].forEach(id => {
+    document.getElementById(id).style.display = hasData ? '' : 'none';
+  });
+  if (!hasData) return;
+
+  // Daily (last 14 days)
+  const days = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    days.push(d.toISOString().slice(0,10));
+  }
+  const dailyVals = days.map(d => parseFloat(entries.filter(e=>e.date===d).reduce((s,e)=>s+e.hours,0).toFixed(1)));
+  const dayLabels = days.map(d => { const dd = new Date(d+'T00:00:00'); return dd.toLocaleDateString('en-IN',{day:'numeric',month:'short'}); });
+
+  if (dChart) dChart.destroy();
+  dChart = new Chart(document.getElementById('daily-chart'), {
+    type: 'bar',
+    data: { labels: dayLabels, datasets: [{ data: dailyVals, backgroundColor: dailyVals.map(v => v>0?'#6c8cff':'rgba(255,255,255,0.06)'), borderRadius: 5, borderSkipped: false }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.parsed.y}h` } } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#7a7f94', font: { size: 11, family: 'JetBrains Mono' }, callback: v => v+'h' } },
+        x: { grid: { display: false }, ticks: { color: '#7a7f94', font: { size: 10 }, maxRotation: 45, autoSkip: false } }
+      }
+    }
+  });
+
+  // Per student
+  const byStudent = {};
+  entries.forEach(e => { byStudent[e.name] = (byStudent[e.name]||0)+e.hours; });
+  const sNames = Object.keys(byStudent).sort((a,b)=>byStudent[b]-byStudent[a]);
+  const sVals = sNames.map(n => parseFloat(byStudent[n].toFixed(1)));
+  const wrapH = Math.max(200, sNames.length*42+60);
+  document.getElementById('student-chart-wrap').style.height = wrapH+'px';
+  if (sChart) sChart.destroy();
+  sChart = new Chart(document.getElementById('student-chart'), {
+    type: 'bar', indexAxis: 'y',
+    data: { labels: sNames, datasets: [{ data: sVals, backgroundColor: sNames.map((_,i)=>COLORS[i%COLORS.length]), borderRadius: 5, borderSkipped: false }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.parsed.x}h` } } },
+      scales: {
+        x: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#7a7f94', font: { size: 11, family: 'JetBrains Mono' }, callback: v => v+'h' } },
+        y: { grid: { display: false }, ticks: { color: '#f0f0f0', font: { size: 12 } } }
+      }
+    }
+  });
+
+  // Per subject
+  const bySub = {};
+  entries.forEach(e => { bySub[e.subject] = (bySub[e.subject]||0)+e.hours; });
+  const subNames = Object.keys(bySub).sort((a,b)=>bySub[b]-bySub[a]);
+  const subVals = subNames.map(s => parseFloat(bySub[s].toFixed(1)));
+  if (subChart) subChart.destroy();
+  subChart = new Chart(document.getElementById('subject-chart'), {
+    type: 'doughnut',
+    data: { labels: subNames, datasets: [{ data: subVals, backgroundColor: subNames.map((_,i)=>COLORS[i%COLORS.length]), borderWidth: 0, hoverOffset: 6 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { color: '#7a7f94', font: { size: 12, family: 'Sora' }, padding: 16, boxWidth: 12 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}h` } }
+      }
+    }
+  });
+}
+
+// ── Tab switch ────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  ['log','summary','chart'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t===tab?'':'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach((btn,i) => {
+    btn.classList.toggle('active', ['log','summary','chart'][i]===tab);
+  });
+  if (tab==='chart') renderCharts();
+  if (tab==='summary') renderSummary();
+}
+</script>
+</body>
+</html>
